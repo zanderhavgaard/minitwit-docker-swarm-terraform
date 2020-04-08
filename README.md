@@ -1,1 +1,2 @@
-# minitwit-docker-swarm-terraform
+# itu-minitwit-terraform
+Minitwit deployed to Digital Ocean using terraform

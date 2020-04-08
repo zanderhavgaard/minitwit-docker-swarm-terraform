@@ -1,3 +1,7 @@
+worker_token
+manager_token
+ssh_key/*
+
 # Local .terraform directories
 **/.terraform/*
 
