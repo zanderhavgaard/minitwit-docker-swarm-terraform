@@ -15,15 +15,6 @@ services:
       placement:
         constraints: [node.role == manager]
 
-  # use to demo that loadbalancer works
-  # flask-demo:
-    # image: jcdemo/flaskapp
-    # container_name: demo
-    # ports:
-      # - '8080:5000'
-    # deploy:
-      # replicas: 10
-
   loadbalancer:
     image: nginx
     ports:

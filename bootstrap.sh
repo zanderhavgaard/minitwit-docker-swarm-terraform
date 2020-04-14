@@ -45,8 +45,8 @@ ssh \
     -i ssh_key/terraform \
     'docker stack deploy minitwit -c minitwit_stack.yml'
 
-echo -e "\n-->  Done bootstrapping Minitwit"
-echo -e "--> The dbs will need a moment to initialize"
+echo -e "\n--> Done bootstrapping Minitwit"
+echo -e "--> The dbs will need a moment to initialize, this can take up to a couple of minutes..."
 echo -e "--> Site will be avilable @ http://$(terraform output public_ip)"
 echo -e "--> You can check the status of swarm cluster @ http://$(terraform output minitwit-swarm-master-ip-address):8888"
 echo -e "--> To remove the infrastructure run: terraform destroy -auto-approve"
