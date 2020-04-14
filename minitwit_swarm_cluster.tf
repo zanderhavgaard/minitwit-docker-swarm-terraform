@@ -1,18 +1,11 @@
-
-
-
-                     # _
- # _ __ ___   __ _ ___| |_ ___ _ __
+#                      _
+#  _ __ ___   __ _ ___| |_ ___ _ __
 # | '_ ` _ \ / _` / __| __/ _ \ '__|
 # | | | | | | (_| \__ \ ||  __/ |
 # |_| |_| |_|\__,_|___/\__\___|_|
 
 # create cloud vm
 resource "digitalocean_droplet" "minitwit-swarm-master" {
-  # wait for mysql db to be created so we can grab the ip address
-  # TODO uncomment
-  # depends_on = [digitalocean_droplet.minitwit-mysql]
-
   image = "docker-18-04"
   name = "minitwit-swarm-master"
   region = var.region
@@ -29,17 +22,22 @@ resource "digitalocean_droplet" "minitwit-swarm-master" {
     timeout = "2m"
   }
 
-  # provisioner "file" {
-    # source = "docker-compose/minitwit-app-docker-compose.yml"
-    # destination = "/root/docker-compose.yml"
-  # }
+  provisioner "file" {
+    source = "minitwit_stack.yml"
+    destination = "/root/minitwit_stack.yml"
+  }
 
   provisioner "remote-exec" {
     inline = [
-      # allow poers for docker swarm
+      # allow ports for docker swarm
       "ufw allow 2377/tcp",
       "ufw allow 7946",
       "ufw allow 4789/udp",
+      # ports for apps
+      "ufw allow 80",
+      "ufw allow 5000",
+      "ufw allow 8080",
+      "ufw allow 8888",
 
       # initialize docker swarm cluster
       "docker swarm init --advertise-addr ${self.ipv4_address}"
@@ -48,27 +46,25 @@ resource "digitalocean_droplet" "minitwit-swarm-master" {
 
   # save the worker join token
   provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform_key 'docker swarm join-token worker -q' > worker_token"
+    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token worker -q' > worker_token"
   }
 
   # save the manager join token
   provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform_key 'docker swarm join-token manager -q' > manager_token"
+    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token manager -q' > manager_token"
   }
 }
 
 
- # _ __ ___   __ _ _ __   __ _  __ _  ___ _ __
+#  _ __ ___   __ _ _ __   __ _  __ _  ___ _ __
 # | '_ ` _ \ / _` | '_ \ / _` |/ _` |/ _ \ '__|
 # | | | | | | (_| | | | | (_| | (_| |  __/ |
 # |_| |_| |_|\__,_|_| |_|\__,_|\__, |\___|_|
-                             # |___/
+#                              |___/
 
 # create cloud vm
 resource "digitalocean_droplet" "minitwit-swarm-manager" {
-  # wait for mysql db to be created so we can grab the ip address
-  # TODO uncomment
-  # depends_on = [digitalocean_droplet.minitwit-mysql]
+  # create managers after the master
   depends_on = [digitalocean_droplet.minitwit-swarm-master]
 
   # number of vms to create
@@ -97,10 +93,15 @@ resource "digitalocean_droplet" "minitwit-swarm-manager" {
 
   provisioner "remote-exec" {
     inline = [
-      # allow poers for docker swarm
+      # allow ports for docker swarm
       "ufw allow 2377/tcp",
       "ufw allow 7946",
       "ufw allow 4789/udp",
+      # ports for apps
+      "ufw allow 80",
+      "ufw allow 5000",
+      "ufw allow 8080",
+      "ufw allow 8888",
 
       # join swarm cluster as managers
       "docker swarm join --token $(cat manager_token) ${digitalocean_droplet.minitwit-swarm-master.ipv4_address}"
@@ -109,21 +110,19 @@ resource "digitalocean_droplet" "minitwit-swarm-manager" {
 }
 
 
-                    # _
+#                     _
 # __      _____  _ __| | _____ _ __
 # \ \ /\ / / _ \| '__| |/ / _ \ '__|
- # \ V  V / (_) | |  |   <  __/ |
-  # \_/\_/ \___/|_|  |_|\_\___|_|
-
+#  \ V  V / (_) | |  |   <  __/ |
+#   \_/\_/ \___/|_|  |_|\_\___|_|
+#
 # create cloud vm
 resource "digitalocean_droplet" "minitwit-swarm-worker" {
-  # wait for mysql db to be created so we can grab the ip address
-  # TODO uncomment
-  # depends_on = [digitalocean_droplet.minitwit-mysql]
+  # create workers after the master
   depends_on = [digitalocean_droplet.minitwit-swarm-master]
 
   # number of vms to create
-  count = 5
+  count = 3
 
   image = "docker-18-04"
   name = "minitwit-swarm-worker-${count.index}"
@@ -148,14 +147,39 @@ resource "digitalocean_droplet" "minitwit-swarm-worker" {
 
   provisioner "remote-exec" {
     inline = [
-      # allow poers for docker swarm
+      # allow ports for docker swarm
       "ufw allow 2377/tcp",
       "ufw allow 7946",
       "ufw allow 4789/udp",
+      # ports for apps
+      "ufw allow 80",
+      "ufw allow 5000",
+      "ufw allow 8080",
+      "ufw allow 8888",
 
       # join swarm cluster as workers
       "docker swarm join --token $(cat worker_token) ${digitalocean_droplet.minitwit-swarm-master.ipv4_address}"
     ]
+  }
+}
+
+resource "null_resource" "initialize-stack" {
+  depends_on = [
+    digitalocean_droplet.minitwit-swarm-master,
+    digitalocean_droplet.minitwit-swarm-manager,
+    digitalocean_droplet.minitwit-swarm-worker
+  ]
+
+  provisioner "local-exec" {
+    command = "bash gen_load_balancer_config.sh"
+  }
+
+  provisioner "local-exec" {
+    command = "bash scp_load_balancer_config.sh"
+  }
+
+  provisioner "local-exec" {
+    command = "ssh -o 'StrictHostKeyChecking no' root@${digitalocean_droplet.minitwit-swarm-master.ipv4_address} -i ssh_key/terraform 'docker stack deploy minitwit -c minitwit_stack.yml'"
   }
 }
 

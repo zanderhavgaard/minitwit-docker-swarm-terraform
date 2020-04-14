@@ -35,7 +35,8 @@ import mysql.connector as mysql
 # mysqldb connection
 #  DB_HOST = "172.17.0.2"
 #  DB_HOST = "minitwit_mysql"
-DB_HOST = os.environ['DB_HOST']
+#  DB_HOST = os.environ['DB_HOST']
+DB_HOST = "minitwit_itusqlimage"
 print('db_host', DB_HOST)
 DB_PORT = 3306
 DB_USER = "root"

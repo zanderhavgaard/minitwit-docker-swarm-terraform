@@ -16,6 +16,10 @@ provider "digitalocean" {
   version = "1.14"
 }
 
+provider "null" {
+  version = "2.1"
+}
+
 # add the ssh key
 resource "digitalocean_ssh_key" "minitwit" {
   name = "minitwit"
