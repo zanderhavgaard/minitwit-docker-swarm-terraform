@@ -1,7 +1,7 @@
 #!/bin/bash
 
-template_file='load_balancer_template.conf'
-output_file='load_balancer.conf'
+template_file='scripts/load_balancer_template.conf'
+output_file='temp/load_balancer.conf'
 
 rm $output_file &>/dev/null
 cp $template_file $output_file

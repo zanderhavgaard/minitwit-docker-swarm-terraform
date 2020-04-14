@@ -1,8 +1,7 @@
-
 #!/bin/bash
 
-# filename
-config_file='load_balancer.conf'
+# load balancer config file
+config_file='temp/load_balancer.conf'
 
 # ssh key
 key_file='ssh_key/terraform'

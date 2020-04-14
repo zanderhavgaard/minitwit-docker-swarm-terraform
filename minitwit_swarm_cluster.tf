@@ -23,7 +23,7 @@ resource "digitalocean_droplet" "minitwit-swarm-master" {
   }
 
   provisioner "file" {
-    source = "minitwit_stack.yml"
+    source = "stack/minitwit_stack.yml"
     destination = "/root/minitwit_stack.yml"
   }
 
@@ -35,7 +35,6 @@ resource "digitalocean_droplet" "minitwit-swarm-master" {
       "ufw allow 4789/udp",
       # ports for apps
       "ufw allow 80",
-      "ufw allow 5000",
       "ufw allow 8080",
       "ufw allow 8888",
 
@@ -46,12 +45,12 @@ resource "digitalocean_droplet" "minitwit-swarm-master" {
 
   # save the worker join token
   provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token worker -q' > worker_token"
+    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token worker -q' > temp/worker_token"
   }
 
   # save the manager join token
   provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token manager -q' > manager_token"
+    command = "ssh -o 'StrictHostKeyChecking no' root@${self.ipv4_address} -i ssh_key/terraform 'docker swarm join-token manager -q' > temp/manager_token"
   }
 }
 
@@ -87,7 +86,7 @@ resource "digitalocean_droplet" "minitwit-swarm-manager" {
   }
 
   provisioner "file" {
-    source = "manager_token"
+    source = "temp/manager_token"
     destination = "/root/manager_token"
   }
 
@@ -99,7 +98,6 @@ resource "digitalocean_droplet" "minitwit-swarm-manager" {
       "ufw allow 4789/udp",
       # ports for apps
       "ufw allow 80",
-      "ufw allow 5000",
       "ufw allow 8080",
       "ufw allow 8888",
 
@@ -141,7 +139,7 @@ resource "digitalocean_droplet" "minitwit-swarm-worker" {
   }
 
   provisioner "file" {
-    source = "worker_token"
+    source = "temp/worker_token"
     destination = "/root/worker_token"
   }
 
@@ -153,7 +151,6 @@ resource "digitalocean_droplet" "minitwit-swarm-worker" {
       "ufw allow 4789/udp",
       # ports for apps
       "ufw allow 80",
-      "ufw allow 5000",
       "ufw allow 8080",
       "ufw allow 8888",
 
@@ -162,27 +159,6 @@ resource "digitalocean_droplet" "minitwit-swarm-worker" {
     ]
   }
 }
-
-resource "null_resource" "initialize-stack" {
-  depends_on = [
-    digitalocean_droplet.minitwit-swarm-master,
-    digitalocean_droplet.minitwit-swarm-manager,
-    digitalocean_droplet.minitwit-swarm-worker
-  ]
-
-  provisioner "local-exec" {
-    command = "bash gen_load_balancer_config.sh"
-  }
-
-  provisioner "local-exec" {
-    command = "bash scp_load_balancer_config.sh"
-  }
-
-  provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' root@${digitalocean_droplet.minitwit-swarm-master.ipv4_address} -i ssh_key/terraform 'docker stack deploy minitwit -c minitwit_stack.yml'"
-  }
-}
-
 
 output "minitwit-swarm-master-ip-address" {
   value = digitalocean_droplet.minitwit-swarm-master.ipv4_address

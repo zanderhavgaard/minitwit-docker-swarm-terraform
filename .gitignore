@@ -1,7 +1,5 @@
+secrets
 temp/*
-load_balancer.conf
-worker_token
-manager_token
 ssh_key/*
 
 # Local .terraform directories
