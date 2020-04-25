@@ -1,3 +1,4 @@
+The newest version of this scenario is now at the ITU devops course GH page: https://github.com/itu-devops/itu-minitwit-docker-swarm-teraform
 
 # Minitwit on a docker swarm cluster using terraform
 
